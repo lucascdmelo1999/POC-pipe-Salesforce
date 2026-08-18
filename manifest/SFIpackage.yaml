@@ -1,0 +1,4 @@
+projectPath: ./vlocity
+
+manifest:
+  - OmniScript/MeuOmniScript
