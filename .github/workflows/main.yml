@@ -1,0 +1,62 @@
+name: Salesforce Deploy - UAT
+
+on:
+  pull_request:
+    branches:
+      - UAT
+
+  workflow_dispatch:
+
+jobs:
+  deploy-uat:
+    name: Deploy Salesforce - UAT
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # 1. Checkout do código
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Instala Salesforce CLI
+      - name: Install Salesforce CLI
+        run: |
+          npm install -g @salesforce/cli
+          sf --version
+
+      # 3. Criar arquivo da chave JWT
+      - name: Create JWT Key
+        run: |
+          echo "${{ secrets.SF_JWT_KEY }}" | base64 --decode > server.key
+          chmod 600 server.key
+
+      # 4. Autenticação na org UAT
+      - name: Authenticate Salesforce UAT
+        run: |
+          sf org login jwt \
+            --username "${{ secrets.SF_USERNAME }}" \
+            --client-id "${{ secrets.SF_CLIENT_ID }}" \
+            --jwt-key-file server.key \
+            --instance-url "${{ secrets.SF_INSTANCE_URL }}" \
+            --alias UAT
+
+      # 5. Verificar autenticação
+      - name: Check Salesforce Authentication
+        run: |
+          sf org display --target-org UAT
+
+      # 6. Validar deploy
+      - name: Validate Deployment
+        run: |
+          sf project deploy validate \
+            --target-org UAT \
+            --source-dir force-app \
+            --wait 30
+
+      # 7. Deploy no UAT
+      - name: Deploy to UAT
+        run: |
+          sf project deploy start \
+            --target-org UAT \
+            --source-dir force-app \
+            --wait 30
