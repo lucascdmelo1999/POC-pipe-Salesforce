@@ -28,7 +28,7 @@ jobs:
       # 3. Criar arquivo da chave JWT
       - name: Create JWT Key
         run: |
-          echo "${{ secrets.SF_JWT_KEY }}" | base64 --decode > server.key
+          printf '%s\n' "${{ secrets.SF_JWT_KEY }}" > server.key
           chmod 600 server.key
 
       # 4. Autenticação na org UAT
