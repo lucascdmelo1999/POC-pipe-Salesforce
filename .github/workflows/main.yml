@@ -11,7 +11,8 @@ jobs:
   deploy-uat:
     name: Deploy Salesforce - UAT
     runs-on: ubuntu-latest
-
+    environment: Group_Var
+    
     steps:
 
       # 1. Checkout do código
