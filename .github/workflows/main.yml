@@ -11,7 +11,8 @@ jobs:
   deploy-uat:
     name: Deploy Salesforce - UAT
     runs-on: ubuntu-latest
-
+    environment: Group_Var
+    
     steps:
 
       # 1. Checkout do código
@@ -27,7 +28,7 @@ jobs:
       # 3. Criar arquivo da chave JWT
       - name: Create JWT Key
         run: |
-          echo "${{ secrets.SF_JWT_KEY }}" | base64 --decode > server.key
+          printf '%s\n' "${{ secrets.SF_JWT_KEY }}" > server.key
           chmod 600 server.key
 
       # 4. Autenticação na org UAT
@@ -49,14 +50,16 @@ jobs:
       - name: Validate Deployment
         run: |
           sf project deploy validate \
+            --manifest manifest/package.xml \
             --target-org UAT \
-            --source-dir force-app \
-            --wait 30
+            --test-level RunLocalTests \
+            --wait 120
 
       # 7. Deploy no UAT
       - name: Deploy to UAT
         run: |
           sf project deploy start \
+            --manifest manifest/package.xml \
             --target-org UAT \
-            --source-dir force-app \
-            --wait 30
+            --test-level RunLocalTests \
+            --wait 120
