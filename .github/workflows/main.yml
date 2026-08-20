@@ -3,7 +3,7 @@ name: Salesforce Deploy - UAT
 on:
   pull_request:
     branches:
-      - UAT
+      - main
 
   workflow_dispatch:
 
