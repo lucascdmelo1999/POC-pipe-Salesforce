@@ -46,38 +46,45 @@ jobs:
         run: |
           sf org display --target-org UAT
 
-      # echo '====== Extração de class de teste ======'
       - name: Extração de class de teste
         run: |
           testClassesSanitized=$(
             grep -oP '(?<=<members>).*?(?=</members>)' "${{ secrets.PATH_METADATA }}" | \
             while read className; do
               classFile="force-app/main/default/classes/${className}.cls"
-
               if [ -f "$classFile" ] && grep -qi "@isTest" "$classFile"; then
                 echo "$className"
               fi
             done | tr '\n' ' '
-          );
+          )
+          echo "Classes encontradas: $testClassesSanitized"
+          echo "TEST_CLASSES=$testClassesSanitized" >> "$GITHUB_ENV"
 
-          echo $testClassesSanitized
-
-      # 6. Validar deploy
-      - name: Validate Deployment
+      - name: Validar deploy
         run: |
+          TEST_FLAGS=""
+          for cls in $TEST_CLASSES; do
+            TEST_FLAGS="$TEST_FLAGS --tests $cls"
+          done
+
           sf project deploy validate \
             --manifest "${{ secrets.PATH_METADATA }}" \
             --target-org UAT \
             --test-level RunSpecifiedTests \
-            --tests $testClassesSanitized \
+            $TEST_FLAGS \
             --wait 120
 
       # 7. Deploy no UAT
       - name: Deploy to UAT
         run: |
-          sf project deploy validate \
+          TEST_FLAGS=""
+            for cls in $TEST_CLASSES; do
+              TEST_FLAGS="$TEST_FLAGS --tests $cls"
+            done
+
+          sf project deploy start \
             --manifest manifest/package.xml \
             --target-org UAT \
             --test-level RunSpecifiedTests \
-            --tests $testClassesSanitized \
+            $TEST_FLAGS \
             --wait 120
