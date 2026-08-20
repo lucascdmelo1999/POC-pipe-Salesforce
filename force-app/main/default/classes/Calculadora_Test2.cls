@@ -9,10 +9,9 @@
 public class Calculadora_Test2 {
 
     @IsTest
-    static testMethod void testcalc2(){
+    static void testcalc2(){
         Calculadora calc = new Calculadora();
-        calc.somar(1,2);
-        System.assertEquals(true,true,'test');
+        calc.somar(1, 2);
+        System.assertEquals(true, true, 'test');
     }
-    
 }
