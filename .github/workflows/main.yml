@@ -45,6 +45,32 @@ jobs:
       - name: Check Salesforce Authentication
         run: |
           sf org display --target-org UAT
+      
+      - name: PMD - Análise de código
+        run: |
+          set +e
+
+          sf code-analyzer run \
+            --rule-selector pmd:Recommended \
+            --target "force-app/main/default/classes" \
+            --severity-threshold 3 \
+            --output-file pmd-results.json \
+            --view detail
+
+          PMD_EXIT_CODE=$?
+
+          echo "===== Resultado PMD ====="
+
+          if [ -f pmd-results.json ]; then
+            cat pmd-results.json
+          fi
+
+          if [ $PMD_EXIT_CODE -ne 0 ]; then
+            echo "❌ PMD encontrou violações. Pipeline interrompido."
+            exit $PMD_EXIT_CODE
+          fi
+
+          echo "✅ PMD aprovado."
 
       - name: Extração de classes de teste
         run: |
