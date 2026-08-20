@@ -46,26 +46,33 @@ jobs:
         run: |
           sf org display --target-org UAT
 
-      - name: Extração de class de teste
+      - name: Extração de classes de teste
         run: |
           testClassesSanitized=$(
-            grep -oP '(?<=<members>).*?(?=</members>)' "${{ secrets.PATH_METADATA }}" | \
-            while read className; do
+            grep -oP '(?<=<members>).*?(?=</members>)' "${{ secrets.PATH_METADATA }}" |
+            while read -r className; do
               classFile="force-app/main/default/classes/${className}.cls"
+
               if [ -f "$classFile" ] && grep -qi "@isTest" "$classFile"; then
                 echo "$className"
               fi
-            done | tr '\n' ' '
+            done | xargs
           )
-          printf "Classes encontradas: $testClassesSanitized"
-          printf "TEST_CLASSES=$testClassesSanitized" >> "$GITHUB_ENV"
+
+          echo "Classes encontradas: $testClassesSanitized"
+          echo "TEST_CLASSES=$testClassesSanitized" >> "$GITHUB_ENV"
 
       - name: Validar deploy
         run: |
+          echo "Classes de teste: $TEST_CLASSES"
+
           TEST_FLAGS=""
+
           for cls in $TEST_CLASSES; do
             TEST_FLAGS="$TEST_FLAGS --tests $cls"
           done
+
+          echo "Test flags: $TEST_FLAGS"
 
           sf project deploy validate \
             --manifest "${{ secrets.PATH_METADATA }}" \
