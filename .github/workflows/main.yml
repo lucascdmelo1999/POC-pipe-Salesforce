@@ -4,8 +4,8 @@ on:
   pull_request:
     branches:
       - main
-      - uat
-      - qa
+      - UAT
+      - QA
 
   workflow_dispatch:
 
@@ -32,18 +32,16 @@ jobs:
           if [ "${{ github.base_ref }}" = "main" ]; then
             echo "SF_ALIAS=PROD" >> $GITHUB_ENV
 
-          elif [ "${{ github.base_ref }}" = "uat" ]; then
+          elif [ "${{ github.base_ref }}" = "UAT" ]; then
             echo "SF_ALIAS=UAT" >> $GITHUB_ENV
 
-          elif [ "${{ github.base_ref }}" = "qa" ]; then
+          elif [ "${{ github.base_ref }}" = "QA" ]; then
             echo "SF_ALIAS=QA" >> $GITHUB_ENV
 
           else
             echo "Branch não possui ambiente configurado."
             exit 1
           fi
-
-          echo "Alias Salesforce: $SF_ALIAS"
 
       # 3. Instala Salesforce CLI
       - name: Install Salesforce CLI
