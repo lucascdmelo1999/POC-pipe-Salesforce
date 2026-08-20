@@ -53,7 +53,7 @@ jobs:
           sf code-analyzer run \
             --rule-selector pmd:Recommended \
             --target "force-app/main/default/classes" \
-            --severity-threshold 5 \
+            --severity-threshold 4 \
             --output-file pmd-results.json \
             --view detail
 
