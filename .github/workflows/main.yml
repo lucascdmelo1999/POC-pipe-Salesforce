@@ -45,21 +45,37 @@ jobs:
       - name: Check Salesforce Authentication
         run: |
           sf org display --target-org UAT
+      # echo '====== Extração de class de teste ======'
+      - name: Extração de class de teste
+        run: |
+          testClassesSanitized=$(
+            grep -oP '(?<=<members>).*?(?=</members>)' "$(PATH_METADATA)" | \
+            while read className; do
+              classFile="force-app/main/default/classes/${className}.cls"
 
+              if [ -f "$classFile" ] && grep -qi "@isTest" "$classFile"; then
+                echo "$className"
+              fi
+            done | tr '\n' ' '
+          );
+
+          echo $testClassesSanitized
       # 6. Validar deploy
       - name: Validate Deployment
         run: |
           sf project deploy validate \
             --manifest manifest/package.xml \
             --target-org UAT \
-            --test-level RunLocalTests \
+            --test-level RunSpecifiedTests \
+            --tests $testClassesSanitized \
             --wait 120
 
       # 7. Deploy no UAT
       - name: Deploy to UAT
         run: |
-          sf project deploy start \
+          sf project deploy validate \
             --manifest manifest/package.xml \
             --target-org UAT \
-            --test-level RunLocalTests \
+            --test-level RunSpecifiedTests \
+            --tests $testClassesSanitized \
             --wait 120
