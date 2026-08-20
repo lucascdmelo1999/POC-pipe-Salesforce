@@ -57,8 +57,8 @@ jobs:
               fi
             done | tr '\n' ' '
           )
-          echo "Classes encontradas: $testClassesSanitized"
-          echo "TEST_CLASSES=$testClassesSanitized" >> "$GITHUB_ENV"
+          printf "Classes encontradas: $testClassesSanitized"
+          printf "TEST_CLASSES=$testClassesSanitized" >> "$GITHUB_ENV"
 
       - name: Validar deploy
         run: |
