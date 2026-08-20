@@ -8,16 +8,17 @@
 @IsTest
 public class Calculadora_Test {
 
-    @isTest static testMethod void testcalc(){
+    @IsTest
+    static void testcalc() {
         Calculadora calc = new Calculadora();
-        calc.somar(1,2);
-        System.assertEquals(true,true,'test');
+        calc.somar(1, 2);
+        System.assertEquals(true, true, 'test');
     }
 
-    @isTest static testMethod void testcalc2(){
+    @IsTest
+    static void testcalc2() {
         Calculadora calc = new Calculadora();
-        calc.somar(1,2);
-        System.assertEquals(true,true,'test');
+        calc.somar(1, 2);
+        System.assertEquals(true, true, 'test');
     }
-    
 }
