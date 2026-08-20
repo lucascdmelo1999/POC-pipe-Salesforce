@@ -5,9 +5,10 @@
  * @last modified on  : 07-26-2022
  * @last modified by  : lucas.correia.d.melo@accenture.com
 **/
-@isTest
+@IsTest
 public class Calculadora_Test2 {
-    
+
+    @isTest
     private static testMethod void testcalc2(){
         Calculadora calc = new Calculadora();
         calc.somar(1,2);
