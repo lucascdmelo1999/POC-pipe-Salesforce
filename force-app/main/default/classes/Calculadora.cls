@@ -11,5 +11,5 @@ public without sharing class Calculadora {
     
     public void somar(Integer a , Integer b) {       
         System.debug(a + b);
-    }
+    }//teste
 }
