@@ -16,11 +16,7 @@ jobs:
 
     # Define o Environment do GitHub conforme a branch de destino do PR
     environment:
-      name: ${{ 
-        github.base_ref == 'main' && 'PROD' ||
-        github.base_ref == 'uat' && 'UAT' ||
-        github.base_ref == 'qa' && 'QA' 
-      }}
+      name: ${{ github.base_ref }}
 
     steps:
 
@@ -34,15 +30,12 @@ jobs:
           echo "Branch de destino: ${{ github.base_ref }}"
 
           if [ "${{ github.base_ref }}" = "main" ]; then
-            echo "ENVIRONMENT=PROD" >> $GITHUB_ENV
             echo "SF_ALIAS=PROD" >> $GITHUB_ENV
 
           elif [ "${{ github.base_ref }}" = "uat" ]; then
-            echo "ENVIRONMENT=UAT" >> $GITHUB_ENV
             echo "SF_ALIAS=UAT" >> $GITHUB_ENV
 
           elif [ "${{ github.base_ref }}" = "qa" ]; then
-            echo "ENVIRONMENT=QA" >> $GITHUB_ENV
             echo "SF_ALIAS=QA" >> $GITHUB_ENV
 
           else
@@ -50,7 +43,6 @@ jobs:
             exit 1
           fi
 
-          echo "Ambiente selecionado: $ENVIRONMENT"
           echo "Alias Salesforce: $SF_ALIAS"
 
       # 3. Instala Salesforce CLI
@@ -127,7 +119,7 @@ jobs:
       # 9. Validar deploy
       - name: Validar deploy
         run: |
-          echo "Ambiente: $ENVIRONMENT"
+          echo "Realizando Validação no ambiente: $SF_ALIAS"
           echo "Classes de teste: $TEST_CLASSES"
 
           TEST_FLAGS=""
@@ -148,7 +140,7 @@ jobs:
       # 10. Deploy
       - name: Deploy Salesforce
         run: |
-          echo "Realizando deploy no ambiente: $ENVIRONMENT"
+          echo "Realizando deploy no ambiente: $SF_ALIAS"
 
           TEST_FLAGS=""
 
@@ -162,4 +154,3 @@ jobs:
             --test-level RunSpecifiedTests \
             $TEST_FLAGS \
             --wait 120
-```
