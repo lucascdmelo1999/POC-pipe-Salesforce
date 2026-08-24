@@ -115,7 +115,7 @@ jobs:
           echo "TEST_CLASSES=$testClassesSanitized" >> "$GITHUB_ENV"
 
       # 9. Validar deploy
-      - name: Validar deploy
+      - name: Validar deploy ${{ github.base_ref }}
         run: |
           echo "Realizando Validação no ambiente: $SF_ALIAS"
           echo "Classes de teste: $TEST_CLASSES"
@@ -136,7 +136,7 @@ jobs:
             --wait 120
 
       # 10. Deploy
-      - name: Deploy Salesforce
+      - name: Deploy Salesforce ${{ github.base_ref }}
         run: |
           echo "Realizando deploy no ambiente: $SF_ALIAS"
 
