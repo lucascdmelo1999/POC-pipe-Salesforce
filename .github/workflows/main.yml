@@ -1,4 +1,4 @@
-name: Salesforce Deploy
+name: Salesforce Validate
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   deploy:
-    name: Salesforce Deploy
+    name: Salesforce Validate
     runs-on: ubuntu-latest
 
     # Define o Environment do GitHub conforme a branch de destino do PR
@@ -135,20 +135,20 @@ jobs:
             $TEST_FLAGS \
             --wait 120
 
-      # 10. Deploy
-      - name: Deploy Salesforce ${{ github.base_ref }}
-        run: |
-          echo "Realizando deploy no ambiente: $SF_ALIAS"
+      # # 10. Deploy
+      # - name: Deploy Salesforce ${{ github.base_ref }}
+      #   run: |
+      #     echo "Realizando deploy no ambiente: $SF_ALIAS"
 
-          TEST_FLAGS=""
+      #     TEST_FLAGS=""
 
-          for cls in $TEST_CLASSES; do
-            TEST_FLAGS="$TEST_FLAGS --tests $cls"
-          done
+      #     for cls in $TEST_CLASSES; do
+      #       TEST_FLAGS="$TEST_FLAGS --tests $cls"
+      #     done
 
-          sf project deploy start \
-            --manifest "${{ secrets.PATH_METADATA }}" \
-            --target-org "$SF_ALIAS" \
-            --test-level RunSpecifiedTests \
-            $TEST_FLAGS \
-            --wait 120
+      #     sf project deploy start \
+      #       --manifest "${{ secrets.PATH_METADATA }}" \
+      #       --target-org "$SF_ALIAS" \
+      #       --test-level RunSpecifiedTests \
+      #       $TEST_FLAGS \
+      #       --wait 120
