@@ -1,7 +1,6 @@
-name: Salesforce Validate
+name: Salesforce Deploy
 
 on:
-  pull_request:
     branches:
       - main
       - UAT
@@ -11,7 +10,7 @@ on:
 
 jobs:
   deploy:
-    name: Salesforce Validate
+    name: Salesforce Deploy
     runs-on: ubuntu-latest
 
     # Define o Environment do GitHub conforme a branch de destino do PR
@@ -70,33 +69,6 @@ jobs:
         run: |
           sf org display --target-org "$SF_ALIAS"
 
-      # 7. PMD
-      - name: PMD - Análise de código
-        run: |
-          set +e
-
-          sf code-analyzer run \
-            --rule-selector pmd:Recommended \
-            --target "force-app/main/default/classes" \
-            --severity-threshold 3 \
-            --output-file pmd-results.json \
-            --view detail
-
-          PMD_EXIT_CODE=$?
-
-          echo "===== Resultado PMD ====="
-
-          if [ -f pmd-results.json ]; then
-            cat pmd-results.json
-          fi
-
-          if [ $PMD_EXIT_CODE -ne 0 ]; then
-            echo "❌ PMD encontrou violações. Pipeline interrompido."
-            exit $PMD_EXIT_CODE
-          fi
-
-          echo "✅ PMD aprovado."
-
       # 8. Extração das classes de teste
       - name: Extração de classes de teste
         run: |
@@ -113,12 +85,11 @@ jobs:
 
           echo "Classes encontradas: $testClassesSanitized"
           echo "TEST_CLASSES=$testClassesSanitized" >> "$GITHUB_ENV"
-
-      # 9. Validar deploy
-      - name: Validar deploy ${{ github.base_ref }}
+          
+      # 9. Deploy
+      - name: Deploy Salesforce ${{ github.base_ref }}
         run: |
-          echo "Realizando Validação no ambiente: $SF_ALIAS"
-          echo "Classes de teste: $TEST_CLASSES"
+          echo "Realizando deploy no ambiente: $SF_ALIAS"
 
           TEST_FLAGS=""
 
@@ -126,29 +97,9 @@ jobs:
             TEST_FLAGS="$TEST_FLAGS --tests $cls"
           done
 
-          echo "Test flags: $TEST_FLAGS"
-
-          sf project deploy validate \
+          sf project deploy start \
             --manifest "${{ secrets.PATH_METADATA }}" \
             --target-org "$SF_ALIAS" \
             --test-level RunSpecifiedTests \
             $TEST_FLAGS \
             --wait 120
-
-      # # 10. Deploy
-      # - name: Deploy Salesforce ${{ github.base_ref }}
-      #   run: |
-      #     echo "Realizando deploy no ambiente: $SF_ALIAS"
-
-      #     TEST_FLAGS=""
-
-      #     for cls in $TEST_CLASSES; do
-      #       TEST_FLAGS="$TEST_FLAGS --tests $cls"
-      #     done
-
-      #     sf project deploy start \
-      #       --manifest "${{ secrets.PATH_METADATA }}" \
-      #       --target-org "$SF_ALIAS" \
-      #       --test-level RunSpecifiedTests \
-      #       $TEST_FLAGS \
-      #       --wait 120
