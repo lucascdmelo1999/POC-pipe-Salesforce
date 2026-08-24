@@ -1,6 +1,7 @@
 name: Salesforce Deploy
 
 on:
+  push:
     branches:
       - main
       - UAT
