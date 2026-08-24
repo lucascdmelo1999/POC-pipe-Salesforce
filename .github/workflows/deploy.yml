@@ -16,7 +16,7 @@ jobs:
 
     # Define o Environment do GitHub conforme a branch de destino do PR
     environment:
-      name: ${{ github.base_ref }}
+      name: ${{ github.ref_name }}
 
     steps:
 
@@ -27,15 +27,15 @@ jobs:
       # 2. Identificar ambiente
       - name: Identificar ambiente
         run: |
-          echo "Branch de destino: ${{ github.base_ref }}"
+          echo "Branch de destino: ${{ github.ref_name }}"
 
-          if [ "${{ github.base_ref }}" = "main" ]; then
+          if [ "${{ github.ref_name }}" = "main" ]; then
             echo "SF_ALIAS=PROD" >> $GITHUB_ENV
 
-          elif [ "${{ github.base_ref }}" = "UAT" ]; then
+          elif [ "${{ github.ref_name }}" = "UAT" ]; then
             echo "SF_ALIAS=UAT" >> $GITHUB_ENV
 
-          elif [ "${{ github.base_ref }}" = "QA" ]; then
+          elif [ "${{ github.ref_name }}" = "QA" ]; then
             echo "SF_ALIAS=QA" >> $GITHUB_ENV
 
           else
@@ -88,7 +88,7 @@ jobs:
           echo "TEST_CLASSES=$testClassesSanitized" >> "$GITHUB_ENV"
           
       # 9. Deploy
-      - name: Deploy Salesforce ${{ github.base_ref }}
+      - name: Deploy Salesforce ${{ github.ref_name }}
         run: |
           echo "Realizando deploy no ambiente: $SF_ALIAS"
 
