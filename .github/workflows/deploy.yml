@@ -1,0 +1,105 @@
+name: Salesforce Deploy
+
+on:
+    branches:
+      - main
+      - UAT
+      - QA
+
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Salesforce Deploy
+    runs-on: ubuntu-latest
+
+    # Define o Environment do GitHub conforme a branch de destino do PR
+    environment:
+      name: ${{ github.base_ref }}
+
+    steps:
+
+      # 1. Checkout do código
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Identificar ambiente
+      - name: Identificar ambiente
+        run: |
+          echo "Branch de destino: ${{ github.base_ref }}"
+
+          if [ "${{ github.base_ref }}" = "main" ]; then
+            echo "SF_ALIAS=PROD" >> $GITHUB_ENV
+
+          elif [ "${{ github.base_ref }}" = "UAT" ]; then
+            echo "SF_ALIAS=UAT" >> $GITHUB_ENV
+
+          elif [ "${{ github.base_ref }}" = "QA" ]; then
+            echo "SF_ALIAS=QA" >> $GITHUB_ENV
+
+          else
+            echo "Branch não possui ambiente configurado."
+            exit 1
+          fi
+
+      # 3. Instala Salesforce CLI
+      - name: Install Salesforce CLI
+        run: |
+          npm install -g @salesforce/cli
+          sf --version
+
+      # 4. Criar arquivo da chave JWT
+      - name: Create JWT Key
+        run: |
+          printf '%s\n' "${{ secrets.SF_JWT_KEY }}" > server.key
+          chmod 600 server.key
+
+      # 5. Autenticação Salesforce
+      - name: Authenticate Salesforce
+        run: |
+          sf org login jwt \
+            --username "${{ secrets.SF_USERNAME }}" \
+            --client-id "${{ secrets.SF_CLIENT_ID }}" \
+            --jwt-key-file server.key \
+            --instance-url "${{ secrets.SF_INSTANCE_URL }}" \
+            --alias "$SF_ALIAS"
+
+      # 6. Verificar autenticação
+      - name: Check Salesforce Authentication
+        run: |
+          sf org display --target-org "$SF_ALIAS"
+
+      # 8. Extração das classes de teste
+      - name: Extração de classes de teste
+        run: |
+          testClassesSanitized=$(
+            grep -oP '(?<=<members>).*?(?=</members>)' "${{ secrets.PATH_METADATA }}" |
+            while read -r className; do
+              classFile="force-app/main/default/classes/${className}.cls"
+
+              if [ -f "$classFile" ] && grep -qi "@isTest" "$classFile"; then
+                echo "$className"
+              fi
+            done | xargs
+          )
+
+          echo "Classes encontradas: $testClassesSanitized"
+          echo "TEST_CLASSES=$testClassesSanitized" >> "$GITHUB_ENV"
+          
+      # 9. Deploy
+      - name: Deploy Salesforce ${{ github.base_ref }}
+        run: |
+          echo "Realizando deploy no ambiente: $SF_ALIAS"
+
+          TEST_FLAGS=""
+
+          for cls in $TEST_CLASSES; do
+            TEST_FLAGS="$TEST_FLAGS --tests $cls"
+          done
+
+          sf project deploy start \
+            --manifest "${{ secrets.PATH_METADATA }}" \
+            --target-org "$SF_ALIAS" \
+            --test-level RunSpecifiedTests \
+            $TEST_FLAGS \
+            --wait 120
