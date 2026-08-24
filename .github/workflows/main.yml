@@ -10,17 +10,17 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Salesforce Deploy
+
+  validate:
+    name: Salesforce Validate
     runs-on: ubuntu-latest
 
-    # Define o Environment do GitHub conforme a branch de destino do PR
     environment:
       name: ${{ github.base_ref }}
 
     steps:
 
-      # 1. Checkout do código
+      # 1. Checkout
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -30,32 +30,32 @@ jobs:
           echo "Branch de destino: ${{ github.base_ref }}"
 
           if [ "${{ github.base_ref }}" = "main" ]; then
-            echo "SF_ALIAS=PROD" >> $GITHUB_ENV
+            echo "SF_ALIAS=PROD" >> "$GITHUB_ENV"
 
           elif [ "${{ github.base_ref }}" = "UAT" ]; then
-            echo "SF_ALIAS=UAT" >> $GITHUB_ENV
+            echo "SF_ALIAS=UAT" >> "$GITHUB_ENV"
 
           elif [ "${{ github.base_ref }}" = "QA" ]; then
-            echo "SF_ALIAS=QA" >> $GITHUB_ENV
+            echo "SF_ALIAS=QA" >> "$GITHUB_ENV"
 
           else
             echo "Branch não possui ambiente configurado."
             exit 1
           fi
 
-      # 3. Instala Salesforce CLI
+      # 3. Instalar Salesforce CLI
       - name: Install Salesforce CLI
         run: |
           npm install -g @salesforce/cli
           sf --version
 
-      # 4. Criar arquivo da chave JWT
+      # 4. Criar arquivo JWT
       - name: Create JWT Key
         run: |
           printf '%s\n' "${{ secrets.SF_JWT_KEY }}" > server.key
           chmod 600 server.key
 
-      # 5. Autenticação Salesforce
+      # 5. Autenticar Salesforce
       - name: Authenticate Salesforce
         run: |
           sf org login jwt \
@@ -114,10 +114,10 @@ jobs:
           echo "Classes encontradas: $testClassesSanitized"
           echo "TEST_CLASSES=$testClassesSanitized" >> "$GITHUB_ENV"
 
-      # 9. Validar deploy
-      - name: Validar deploy ${{ github.base_ref }}
+      # 9. Validate
+      - name: Validar deploy - ${{ github.base_ref }}
         run: |
-          echo "Realizando Validação no ambiente: $SF_ALIAS"
+          echo "Realizando validação no ambiente: $SF_ALIAS"
           echo "Classes de teste: $TEST_CLASSES"
 
           TEST_FLAGS=""
@@ -135,7 +135,91 @@ jobs:
             $TEST_FLAGS \
             --wait 120
 
-      # 10. Deploy
+  approval:
+    name: Aprovação para Deploy - ${{ github.base_ref }}"
+    needs: validate
+    runs-on: ubuntu-latest
+
+    environment:
+      name: ${{ github.base_ref }}
+
+    steps:
+
+      - name: Deploy aprovado
+        run: |
+          echo "======================================"
+          echo "✅ Deploy aprovado!"
+          echo "Ambiente: ${{ github.base_ref }}"
+          echo "Pipeline continuará para o Deploy."
+          echo "======================================"
+
+  deploy:
+    name: Deploy Salesforce - ${{ github.base_ref }}
+    needs: approval
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # Checkout novamente porque cada job possui seu próprio runner
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Identificar ambiente
+      - name: Identificar ambiente
+        run: |
+          if [ "${{ github.base_ref }}" = "main" ]; then
+            echo "SF_ALIAS=PROD" >> "$GITHUB_ENV"
+
+          elif [ "${{ github.base_ref }}" = "UAT" ]; then
+            echo "SF_ALIAS=UAT" >> "$GITHUB_ENV"
+
+          elif [ "${{ github.base_ref }}" = "QA" ]; then
+            echo "SF_ALIAS=QA" >> "$GITHUB_ENV"
+
+          else
+            echo "Branch não possui ambiente configurado."
+            exit 1
+          fi
+
+      # Instalar Salesforce CLI
+      - name: Install Salesforce CLI
+        run: |
+          npm install -g @salesforce/cli
+          sf --version
+
+      # Criar JWT
+      - name: Create JWT Key
+        run: |
+          printf '%s\n' "${{ secrets.SF_JWT_KEY }}" > server.key
+          chmod 600 server.key
+
+      # Autenticar
+      - name: Authenticate Salesforce
+        run: |
+          sf org login jwt \
+            --username "${{ secrets.SF_USERNAME }}" \
+            --client-id "${{ secrets.SF_CLIENT_ID }}" \
+            --jwt-key-file server.key \
+            --instance-url "${{ secrets.SF_INSTANCE_URL }}" \
+            --alias "$SF_ALIAS"
+
+      # Extrair classes de teste novamente
+      - name: Extração de classes de teste
+        run: |
+          testClassesSanitized=$(
+            grep -oP '(?<=<members>).*?(?=</members>)' "${{ secrets.PATH_METADATA }}" |
+            while read -r className; do
+              classFile="force-app/main/default/classes/${className}.cls"
+
+              if [ -f "$classFile" ] && grep -qi "@isTest" "$classFile"; then
+                echo "$className"
+              fi
+            done | xargs
+          )
+
+          echo "TEST_CLASSES=$testClassesSanitized" >> "$GITHUB_ENV"
+
+      # Deploy
       - name: Deploy Salesforce ${{ github.base_ref }}
         run: |
           echo "Realizando deploy no ambiente: $SF_ALIAS"
