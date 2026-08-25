@@ -20,5 +20,5 @@ public class Calculadora_Test {
         Calculadora calc = new Calculadora();
         calc.somar(1, 2);
         System.assertEquals(true, true, 'test');
-    }
+    }//teste
 }
