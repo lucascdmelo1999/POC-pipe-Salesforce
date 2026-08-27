@@ -11,6 +11,9 @@ on:
 
 jobs:
 
+  environment:  
+      name: ${{ github.base_ref }}
+      
   # ============================================================
   # 1. VALIDATE
   # ============================================================
@@ -21,9 +24,6 @@ jobs:
     outputs:
       deployment_id: ${{ steps.validate.outputs.deployment_id }}
 
-    environment:
-      name: ${{ github.base_ref }}
-      
     steps:
 
       # 1. Checkout do código
@@ -174,7 +174,6 @@ jobs:
 
     # Só pede aprovação para QA e UAT
     if: |
-      github.base_ref == 'QA' ||
       github.base_ref == 'UAT'
 
     runs-on: ubuntu-latest
