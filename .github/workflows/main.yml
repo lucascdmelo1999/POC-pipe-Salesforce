@@ -11,9 +11,6 @@ on:
 
 jobs:
 
-  environment:  
-      name: ${{ github.base_ref }}
-      
   # ============================================================
   # 1. VALIDATE
   # ============================================================
@@ -23,6 +20,9 @@ jobs:
 
     outputs:
       deployment_id: ${{ steps.validate.outputs.deployment_id }}
+
+    environment:  
+      name: ${{ github.base_ref }}
 
     steps:
 
@@ -218,6 +218,9 @@ jobs:
       github.base_ref == 'UAT'
 
     runs-on: ubuntu-latest
+
+    environment:  
+      name: ${{ github.base_ref }}
 
     steps:
 
