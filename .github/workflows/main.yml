@@ -46,6 +46,7 @@ jobs:
             echo "SF_ALIAS=QA" >> "$GITHUB_ENV"
             echo "APPROVAL=QA" >> "$GITHUB_OUTPUT"
 
+          echo "APPROVAL destino : ${{ APPROVAL }}"
           else
             echo "Branch não possui ambiente configurado."
             exit 1
@@ -180,7 +181,7 @@ jobs:
       github.base_ref == 'UAT'
 
     runs-on: ubuntu-latest
-
+    
     # Configure Required Reviewers nesse Environment
     environment:
       name: ${{ needs.validate.outputs.APPROVAL }}
@@ -192,6 +193,7 @@ jobs:
           echo "======================================"
           echo "⏸️ DEPLOY AGUARDANDO APROVAÇÃO"
           echo "======================================"
+          echo "Regra: ${{ needs.validate.outputs.APPROVAL }}"
           echo "Ambiente: ${{ github.base_ref }}"
           echo "Deployment ID: ${{ needs.validate.outputs.deployment_id }}"
           echo "======================================"
