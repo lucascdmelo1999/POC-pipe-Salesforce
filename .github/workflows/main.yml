@@ -22,6 +22,7 @@ jobs:
       name: ${{ github.base_ref }}
     outputs:
       deployment_id: ${{ steps.validate.outputs.deployment_id }}
+      APPROVAL: ${{ steps.approval.outputs.APPROVAL }}
 
     steps:
 
@@ -39,11 +40,11 @@ jobs:
 
           elif [ "${{ github.base_ref }}" = "UAT" ]; then
             echo "SF_ALIAS=UAT" >> "$GITHUB_ENV"
-            echo "APPROVAL=UAT_APPROVAL" >> "$GITHUB_ENV"
+            echo "APPROVAL=UAT_APPROVAL" >> "$GITHUB_OUTPUT"
 
           elif [ "${{ github.base_ref }}" = "QA" ]; then
             echo "SF_ALIAS=QA" >> "$GITHUB_ENV"
-            echo "APPROVAL=QA" >> "$GITHUB_ENV"
+            echo "APPROVAL=QA" >> "$GITHUB_OUTPUT"
 
           else
             echo "Branch não possui ambiente configurado."
@@ -182,7 +183,7 @@ jobs:
 
     # Configure Required Reviewers nesse Environment
     environment:
-      name: ${{ APPROVAL }}
+      name: ${{ needs.validate.outputs.APPROVAL }}
 
     steps:
 
