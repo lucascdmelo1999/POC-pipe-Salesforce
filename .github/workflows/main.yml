@@ -22,7 +22,7 @@ jobs:
       name: ${{ github.base_ref }}
     outputs:
       deployment_id: ${{ steps.validate.outputs.deployment_id }}
-      APPROVAL: ${{ steps.approval.outputs.APPROVAL }}
+      APPROVAL: ${{ steps.environment.outputs.APPROVAL }}
 
     steps:
 
