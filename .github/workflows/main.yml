@@ -18,11 +18,12 @@ jobs:
     name: Salesforce Validate
     runs-on: ubuntu-latest
 
-    environment:  
+    environment:
       name: ${{ github.base_ref }}
+
     outputs:
       deployment_id: ${{ steps.validate.outputs.deployment_id }}
-      APPROVAL: ${{ steps.approval.outputs.APPROVAL }}
+      APPROVAL: ${{ steps.environment.outputs.APPROVAL }}
 
     steps:
 
@@ -32,11 +33,13 @@ jobs:
 
       # 2. Identificar ambiente
       - name: Identificar ambiente
+        id: environment
         run: |
           echo "Branch de destino: ${{ github.base_ref }}"
 
           if [ "${{ github.base_ref }}" = "main" ]; then
             echo "SF_ALIAS=PROD" >> "$GITHUB_ENV"
+            echo "APPROVAL=PROD_APPROVAL" >> "$GITHUB_OUTPUT"
 
           elif [ "${{ github.base_ref }}" = "UAT" ]; then
             echo "SF_ALIAS=UAT" >> "$GITHUB_ENV"
@@ -163,7 +166,6 @@ jobs:
           echo "Deployment ID: $DEPLOYMENT_ID"
           echo "======================================"
 
-          # Disponibiliza o ID para os próximos jobs
           echo "deployment_id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
 
 
@@ -192,6 +194,7 @@ jobs:
           echo "======================================"
           echo "⏸️ DEPLOY AGUARDANDO APROVAÇÃO"
           echo "======================================"
+          echo "Regra: ${{ needs.validate.outputs.APPROVAL }}"
           echo "Ambiente: ${{ github.base_ref }}"
           echo "Deployment ID: ${{ needs.validate.outputs.deployment_id }}"
           echo "======================================"
@@ -222,7 +225,7 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    environment:  
+    environment:
       name: ${{ github.base_ref }}
 
     steps:
