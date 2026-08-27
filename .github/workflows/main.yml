@@ -33,13 +33,13 @@ jobs:
           echo "Branch de destino: ${{ github.base_ref }}"
 
           if [ "${{ github.base_ref }}" = "main" ]; then
-            echo "SF_ALIAS=PROD" >> $GITHUB_ENV
+            echo "SF_ALIAS=PROD" >> "$GITHUB_ENV"
 
           elif [ "${{ github.base_ref }}" = "UAT" ]; then
-            echo "SF_ALIAS=UAT" >> $GITHUB_ENV
+            echo "SF_ALIAS=UAT" >> "$GITHUB_ENV"
 
           elif [ "${{ github.base_ref }}" = "QA" ]; then
-            echo "SF_ALIAS=QA" >> $GITHUB_ENV
+            echo "SF_ALIAS=QA" >> "$GITHUB_ENV"
 
           else
             echo "Branch não possui ambiente configurado."
