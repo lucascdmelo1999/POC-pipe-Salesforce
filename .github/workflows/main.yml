@@ -10,13 +10,20 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+
+  # ============================================================
+  # 1. VALIDATE
+  # ============================================================
+  validate:
     name: Salesforce Validate
     runs-on: ubuntu-latest
 
-    # Define o Environment do GitHub conforme a branch de destino do PR
     environment:
       name: ${{ github.base_ref }}
+
+    outputs:
+      deployment_id: ${{ steps.validate.outputs.deployment_id }}
+      APPROVAL: ${{ steps.environment.outputs.APPROVAL }}
 
     steps:
 
@@ -26,17 +33,21 @@ jobs:
 
       # 2. Identificar ambiente
       - name: Identificar ambiente
+        id: environment
         run: |
           echo "Branch de destino: ${{ github.base_ref }}"
 
           if [ "${{ github.base_ref }}" = "main" ]; then
-            echo "SF_ALIAS=PROD" >> $GITHUB_ENV
+            echo "SF_ALIAS=PROD" >> "$GITHUB_ENV"
+            echo "APPROVAL=PROD_APPROVAL" >> "$GITHUB_OUTPUT"
 
           elif [ "${{ github.base_ref }}" = "UAT" ]; then
-            echo "SF_ALIAS=UAT" >> $GITHUB_ENV
+            echo "SF_ALIAS=UAT" >> "$GITHUB_ENV"
+            echo "APPROVAL=UAT_APPROVAL" >> "$GITHUB_OUTPUT"
 
           elif [ "${{ github.base_ref }}" = "QA" ]; then
-            echo "SF_ALIAS=QA" >> $GITHUB_ENV
+            echo "SF_ALIAS=QA" >> "$GITHUB_ENV"
+            echo "APPROVAL=QA" >> "$GITHUB_OUTPUT"
 
           else
             echo "Branch não possui ambiente configurado."
@@ -116,8 +127,12 @@ jobs:
 
       # 9. Validar deploy
       - name: Validar deploy ${{ github.base_ref }}
+        id: validate
         run: |
-          echo "Realizando Validação no ambiente: $SF_ALIAS"
+          echo "======================================"
+          echo "VALIDANDO DEPLOY"
+          echo "======================================"
+          echo "Ambiente: $SF_ALIAS"
           echo "Classes de teste: $TEST_CLASSES"
 
           TEST_FLAGS=""
@@ -133,22 +148,141 @@ jobs:
             --target-org "$SF_ALIAS" \
             --test-level RunSpecifiedTests \
             $TEST_FLAGS \
+            --wait 120 \
+            --json > validate-result.json
+
+          echo "===== Resultado Validate ====="
+          cat validate-result.json
+
+          DEPLOYMENT_ID=$(jq -r '.result.id' validate-result.json)
+
+          if [ -z "$DEPLOYMENT_ID" ] || [ "$DEPLOYMENT_ID" = "null" ]; then
+            echo "❌ Não foi possível recuperar o Deployment ID."
+            exit 1
+          fi
+
+          echo "======================================"
+          echo "✅ VALIDATE CONCLUÍDO"
+          echo "Deployment ID: $DEPLOYMENT_ID"
+          echo "======================================"
+
+          echo "deployment_id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
+
+
+  # ============================================================
+  # 2. APROVAÇÃO
+  # ============================================================
+  approval:
+    name: Aprovação para Quick Deploy
+    needs: validate
+
+    # Só pede aprovação para QA e UAT
+    if: |
+      github.base_ref == 'QA' ||
+      github.base_ref == 'UAT'
+
+    runs-on: ubuntu-latest
+
+    # Configure Required Reviewers nesse Environment
+    environment:
+      name: ${{ needs.validate.outputs.APPROVAL }}
+
+    steps:
+
+      - name: Aguardando aprovação
+        run: |
+          echo "======================================"
+          echo "⏸️ DEPLOY AGUARDANDO APROVAÇÃO"
+          echo "======================================"
+          echo "Regra: ${{ needs.validate.outputs.APPROVAL }}"
+          echo "Ambiente: ${{ github.base_ref }}"
+          echo "Deployment ID: ${{ needs.validate.outputs.deployment_id }}"
+          echo "======================================"
+
+      - name: Deploy aprovado
+        run: |
+          echo "======================================"
+          echo "✅ DEPLOY APROVADO"
+          echo "======================================"
+          echo "Ambiente: ${{ github.base_ref }}"
+          echo "Deployment ID: ${{ needs.validate.outputs.deployment_id }}"
+          echo "======================================"
+
+
+  # ============================================================
+  # 3. QUICK DEPLOY
+  # ============================================================
+  quick-deploy:
+    name: Salesforce Quick Deploy
+    needs:
+      - validate
+      - approval
+
+    # Só executa para QA e UAT
+    if: |
+      github.base_ref == 'QA' ||
+      github.base_ref == 'UAT'
+
+    runs-on: ubuntu-latest
+
+    environment:
+      name: ${{ github.base_ref }}
+
+    steps:
+
+      # 1. Instalar Salesforce CLI
+      - name: Install Salesforce CLI
+        run: |
+          npm install -g @salesforce/cli
+          sf --version
+
+      # 2. Identificar ambiente
+      - name: Identificar ambiente
+        run: |
+          if [ "${{ github.base_ref }}" = "UAT" ]; then
+            echo "SF_ALIAS=UAT" >> "$GITHUB_ENV"
+
+          elif [ "${{ github.base_ref }}" = "QA" ]; then
+            echo "SF_ALIAS=QA" >> "$GITHUB_ENV"
+
+          else
+            echo "Ambiente inválido para Quick Deploy."
+            exit 1
+          fi
+
+      # 3. Criar arquivo da chave JWT
+      - name: Create JWT Key
+        run: |
+          printf '%s\n' "${{ secrets.SF_JWT_KEY }}" > server.key
+          chmod 600 server.key
+
+      # 4. Autenticação Salesforce
+      - name: Authenticate Salesforce
+        run: |
+          sf org login jwt \
+            --username "${{ secrets.SF_USERNAME }}" \
+            --client-id "${{ secrets.SF_CLIENT_ID }}" \
+            --jwt-key-file server.key \
+            --instance-url "${{ secrets.SF_INSTANCE_URL }}" \
+            --alias "$SF_ALIAS"
+
+      # 5. Quick Deploy
+      - name: Quick Deploy ${{ github.base_ref }}
+        run: |
+          DEPLOYMENT_ID="${{ needs.validate.outputs.deployment_id }}"
+
+          echo "======================================"
+          echo "🚀 EXECUTANDO QUICK DEPLOY"
+          echo "======================================"
+          echo "Ambiente: $SF_ALIAS"
+          echo "Deployment ID: $DEPLOYMENT_ID"
+          echo "======================================"
+
+          sf project deploy quick \
+            --job-id "$DEPLOYMENT_ID" \
+            --target-org "$SF_ALIAS" \
             --wait 120
 
-      # # 10. Deploy
-      # - name: Deploy Salesforce ${{ github.base_ref }}
-      #   run: |
-      #     echo "Realizando deploy no ambiente: $SF_ALIAS"
-
-      #     TEST_FLAGS=""
-
-      #     for cls in $TEST_CLASSES; do
-      #       TEST_FLAGS="$TEST_FLAGS --tests $cls"
-      #     done
-
-      #     sf project deploy start \
-      #       --manifest "${{ secrets.PATH_METADATA }}" \
-      #       --target-org "$SF_ALIAS" \
-      #       --test-level RunSpecifiedTests \
-      #       $TEST_FLAGS \
-      #       --wait 120
+          echo "======================================"
+          echo "✅ QUICK DEPLOY CONCLUÍDO"
+          echo "======================================"
