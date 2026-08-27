@@ -18,11 +18,10 @@ jobs:
     name: Salesforce Validate
     runs-on: ubuntu-latest
 
-    outputs:
-      deployment_id: ${{ steps.validate.outputs.deployment_id }}
-
     environment:  
       name: ${{ github.base_ref }}
+    outputs:
+      deployment_id: ${{ steps.validate.outputs.deployment_id }}
 
     steps:
 
