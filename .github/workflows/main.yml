@@ -46,7 +46,7 @@ jobs:
             echo "SF_ALIAS=QA" >> "$GITHUB_ENV"
             echo "APPROVAL=QA" >> "$GITHUB_OUTPUT"
 
-          echo "APPROVAL destino : ${{ APPROVAL }}"
+          echo "APPROVAL destino : ${{ needs.validate.outputs.APPROVAL }}"
           else
             echo "Branch não possui ambiente configurado."
             exit 1
